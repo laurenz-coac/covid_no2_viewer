@@ -8,12 +8,33 @@ import {
 } from './geotiffLoader';
 import {
   GridPoint,
-  NO2Measurement,
-  BaselineMeasurement,
+  CityTimepoint,
   MAJOR_GERMAN_CITIES,
   City,
   DataSourceConfig,
 } from './no2Data';
+
+// Helper function to fetch JSON with error handling
+async function safeFetchJson(url: string) {
+  console.log('Fetching JSON from:', url);
+  const response = await fetch(url);
+  
+  const contentType = response.headers.get('content-type');
+  console.log('Response status:', response.status);
+  console.log('Content-Type:', contentType);
+  
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    console.error('Expected JSON but got HTML/text:', text.substring(0, 300));
+    throw new Error(`Expected JSON but got: ${contentType}`);
+  }
+  
+  return response.json();
+}
 
 /**
  * GeoTIFF-based data source for NO2 measurements
@@ -25,7 +46,6 @@ export class GeoTIFFDataSource {
     data: Float32Array | Int32Array | Uint16Array;
   } | null = null;
   private cities: City[] = MAJOR_GERMAN_CITIES;
-  private cityBaselineCache: Map<string, BaselineMeasurement> = new Map();
 
   constructor(config: DataSourceConfig) {
     this.config = config;
@@ -56,8 +76,8 @@ export class GeoTIFFDataSource {
     }
 
     try {
-      const response = await fetch(this.config.citiesDataUrl);
-      const data = await response.json();
+      const url = `${this.config.citiesDataUrl}/cities.json`;
+      const data = await safeFetchJson(url);
       this.cities = data;
     } catch (error) {
       console.warn('Failed to load cities data, using defaults:', error);
@@ -106,9 +126,8 @@ export class GeoTIFFDataSource {
 
   /**
    * Get measurements for all cities at a specific date
-   * TODO: Do not sample from tiff; load pre-computed city values
    */
-  async getCurrentMeasurements(date: Date): Promise<NO2Measurement[]> {
+  async getCurrentMeasurements(date: Date): Promise<CityTimepoint[]> {
     if (!this.config.geotiffBaseUrl) {
       throw new Error('GeoTIFF base URL not configured');
     }
@@ -117,93 +136,14 @@ export class GeoTIFFDataSource {
     const month = date.getMonth() + 1;
 
     // Load time-series data
-    const cacheKey = `${year}-${month}`;
-    const currentData = await geotiffCache.get(cacheKey, () =>
-      loadTimeSeriesGeoTIFF(this.config.geotiffBaseUrl!, year, month).then(
-        (result) => {
-          if (!result) {
-            throw new Error(
-              `Failed to load GeoTIFF for ${year}-${month}`
-            );
-          }
-          return result;
-        }
-      )
-    );
+    const monthStr = month.toString().padStart(2, '0');
+    const url = `${this.config.citiesDataUrl}/city_timepoints_${year}_${monthStr}.json`;
+    const data = await safeFetchJson(url);
 
-    // Sample values at city locations
-    const measurements: NO2Measurement[] = [];
-    for (const city of this.cities) {
-      const value = sampleRasterBilinear(
-        city.lat,
-        city.lng,
-        currentData.data,
-        currentData.metadata
-      );
-
-      if (value !== null) {
-        measurements.push({
-          cityName: city.name,
-          lat: city.lat,
-          lng: city.lng,
-          value,
-          timestamp: date,
-        });
-      }
-    }
-
-    return measurements;
-  }
-
-  /**
-   * Get baseline data for all cities
-   */
-  async getBaselineData(date: Date): Promise<Map<string, BaselineMeasurement>> {
-    if (this.cityBaselineCache.size > 0) {
-      return this.cityBaselineCache;
-    }
-
-    await this.loadBaseline(date);
-
-    // Sample baseline values at city locations
-    for (const city of this.cities) {
-      const value = sampleRasterBilinear(
-        city.lat,
-        city.lng,
-        this.baselineData!.data,
-        this.baselineData!.metadata
-      );
-
-      if (value !== null) {
-        // Generate synthetic measurements for statistical testing
-        // In a real application, these would come from historical data
-        const measurements: number[] = [];
-        const stdDev = value * 0.15; // Assume 15% coefficient of variation
-
-        for (let i = 0; i < 100; i++) {
-          const randomValue =
-            value + (Math.random() - 0.5) * stdDev * 2;
-          measurements.push(randomValue);
-        }
-
-        const meanValue =
-          measurements.reduce((a, b) => a + b, 0) / measurements.length;
-        const variance =
-          measurements.reduce(
-            (sum, val) => sum + Math.pow(val - meanValue, 2),
-            0
-          ) / measurements.length;
-
-        this.cityBaselineCache.set(city.name, {
-          cityName: city.name,
-          meanValue,
-          stdDev: Math.sqrt(variance),
-          measurements,
-        });
-      }
-    }
-
-    return this.cityBaselineCache;
+    return data.map((item: any) => ({
+        ...item,
+        timestamp: new Date(item.timestamp)
+      }));
   }
 
   /**
@@ -218,7 +158,6 @@ export class GeoTIFFDataSource {
    */
   clearCache(): void {
     geotiffCache.clear();
-    this.cityBaselineCache.clear();
     this.baselineData = null;
   }
 }

@@ -4,9 +4,7 @@ import {
   getCurrentMeasurementsAsync,
   getBaselineDataAsync,
   getMeasurementDifference,
-  isStatisticallySignificant,
   MAJOR_GERMAN_CITIES,
-  getGridData,
   getGridDataAsync,
   GridPoint,
 } from "../lib/no2Data";
@@ -56,19 +54,17 @@ export function MapViewer({
 
     const measurementsWithDiff = currentMeasurements
       .map((m) => {
-        const baselineData = baseline.get(m.cityName);
-        if (!baselineData) return null;
-
+        const baselineData = baseline.find(b => b.name === m.cityName);
+        if (!baselineData) {
+          console.warn('No baseline data for city:', m.cityName);
+          return null;}
         return {
           ...m,
           difference: getMeasurementDifference(m, baselineData),
-          isSignificant: isStatisticallySignificant(
-            m,
-            baselineData,
-          ),
+          isSignificant: m.pValue < 0.05,
           city: MAJOR_GERMAN_CITIES.find(
             (c) => c.name === m.cityName,
-          ),
+          )
         };
       })
       .filter(Boolean);
@@ -434,7 +430,7 @@ useEffect(() => {
 
   // ===== CITY MARKERS (unchanged) =====
   measurements.forEach((measurement: any) => {
-    const pos = latLngToScreen(measurement.lat, measurement.lng);
+    const pos = latLngToScreen(measurement.city.lat, measurement.city.lng);
     
     if (!pos || !isFinite(pos.x) || !isFinite(pos.y)) {
       return;
@@ -475,8 +471,8 @@ useEffect(() => {
     // Check if click is near any city
     for (const measurement of measurements) {
       const pos = latLngToScreen(
-        measurement.lat,
-        measurement.lng,
+        measurement.city.lat,
+        measurement.city.lng,
       );
       const distance = Math.sqrt(
         Math.pow(x - pos.x, 2) + Math.pow(y - pos.y, 2),

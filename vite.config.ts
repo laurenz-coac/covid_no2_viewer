@@ -4,7 +4,7 @@
   import path from 'path';
 
   export default defineConfig({
-    assetsInclude: ['**/*.tif', '**/*.tiff'],
+    assetsInclude: ['**/*.tif', '**/*.tiff', "**/*.json"],
     plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
