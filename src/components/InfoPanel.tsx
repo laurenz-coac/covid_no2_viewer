@@ -68,13 +68,13 @@ export function InfoPanel({ selectedCity, currentDate, onClose }: InfoPanelProps
         <div className="grid grid-cols-2 gap-4">
           <div className="p-3 bg-gray-50 rounded-lg">
             <p className="text-xs text-gray-500">Baseline (2019)</p>
-            <p className="mt-1 text-xl">{baseline.meanValue.toFixed(1)}</p>
-            <p className="text-xs text-gray-500">μg/m³</p>
+            <p className="mt-1 text-xl">{baseline.meanValue.toFixed(6)}</p>
+            <p className="text-xs text-gray-500">mol/m²</p>
           </div>
           <div className="p-3 bg-gray-50 rounded-lg">
             <p className="text-xs text-gray-500">Current</p>
-            <p className="mt-1 text-xl">{current.value.toFixed(1)}</p>
-            <p className="text-xs text-gray-500">μg/m³</p>
+            <p className="mt-1 text-xl">{current.value.toFixed(6)}</p>
+            <p className="text-xs text-gray-500">mol/m²</p>
           </div>
         </div>
 
@@ -92,9 +92,9 @@ export function InfoPanel({ selectedCity, currentDate, onClose }: InfoPanelProps
           </div>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl ${isDecrease ? 'text-green-600' : 'text-orange-600'}`}>
-              {difference > 0 ? '+' : ''}{difference.toFixed(1)}
+              {difference > 0 ? '+' : ''}{difference.toFixed(6)}
             </span>
-            <span className="text-sm text-gray-600">μg/m³</span>
+            <span className="text-sm text-gray-600">mol/m²</span>
           </div>
           <div className={`text-sm mt-1 ${isDecrease ? 'text-green-700' : 'text-orange-700'}`}>
             {percentageChange > 0 ? '+' : ''}{percentageChange.toFixed(1)}% change
@@ -108,13 +108,11 @@ export function InfoPanel({ selectedCity, currentDate, onClose }: InfoPanelProps
             <p>
               {isSignificant ? (
                 <>
-                  The change is <strong>statistically significant</strong> (p &lt; 0.05), 
-                  indicating a real difference from pre-COVID levels.
+                  The change is <strong>statistically significant</strong> (p &lt; 0.05).
                 </>
               ) : (
                 <>
-                  The change is <strong>not statistically significant</strong> (p ≥ 0.05), 
-                  which could be due to natural variation.
+                  The change is <strong>not statistically significant</strong> (p ≥ 0.05).
                 </>
               )}
             </p>

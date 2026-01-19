@@ -42,12 +42,20 @@ export const MAJOR_GERMAN_CITIES: City[] = [
   { name: 'Kiel', lat: 54.3233, lng: 10.1228, population: 247000 },
 ];
 
-export interface NO2Measurement {
+export interface NO2Measurement { // TODO: remove
   cityName: string;
   lat: number;
   lng: number;
-  value: number; // NO2 concentration in μg/m³
+  value: number; // NO2 concentration in mol/m²
   timestamp: Date;
+}
+
+export interface CityTimepoint {
+  cityName: string;
+  timestamp: Date;
+  value: number; // NO2 concentration in mol/m²
+  incidence: number; // COVID-19 incidence rate
+  pValue: number; // p-value for statistical significance
 }
 
 export interface GridPoint {
@@ -57,9 +65,9 @@ export interface GridPoint {
   difference: number;
 }
 
-export interface BaselineMeasurement {
+export interface BaselineMeasurement { // TODO: remove
   cityName: string;
-  meanValue: number; // Average NO2 from 2017-2019
+  meanValue: number; // NO2 from 2019
   stdDev: number; // Standard deviation
   measurements: number[]; // Array of individual measurements for statistical testing
 }
@@ -188,6 +196,8 @@ export async function getCityDataAsync(cityName: string, date: Date) {
   
   const baselineData = baseline.get(cityName);
   const current = measurements.find(m => m.cityName === cityName);
+
+  console.log('getCityDataAsync', cityName, date, baselineData, current);
   
   if (!baselineData || !current) return null;
   

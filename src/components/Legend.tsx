@@ -7,49 +7,49 @@ export function Legend() {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded flex-shrink-0 shadow-sm" style={{ backgroundColor: 'rgba(34, 197, 94, 0.8)' }} />
           <div className="flex-1 text-sm">
-            <div>&lt; -15 μg/m³</div>
+            <div>&lt; -5 μmol/m²</div>
             <div className="text-xs text-gray-500">Strong decrease</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded flex-shrink-0 shadow-sm" style={{ backgroundColor: 'rgba(134, 239, 172, 0.8)' }} />
           <div className="flex-1 text-sm">
-            <div>-8 to -15 μg/m³</div>
+            <div>-2 to -5 μmol/m²</div>
             <div className="text-xs text-gray-500">Moderate decrease</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded flex-shrink-0 shadow-sm" style={{ backgroundColor: 'rgba(187, 247, 208, 0.8)' }} />
           <div className="flex-1 text-sm">
-            <div>-3 to -8 μg/m³</div>
+            <div>-1 to -2 μmol/m²</div>
             <div className="text-xs text-gray-500">Slight decrease</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded flex-shrink-0 shadow-sm" style={{ backgroundColor: 'rgba(229, 231, 235, 0.8)' }} />
           <div className="flex-1 text-sm">
-            <div>-3 to +3 μg/m³</div>
+            <div>-1 to +1 μmol/m²</div>
             <div className="text-xs text-gray-500">No change</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded flex-shrink-0 shadow-sm" style={{ backgroundColor: 'rgba(254, 215, 170, 0.8)' }} />
           <div className="flex-1 text-sm">
-            <div>+3 to +8 μg/m³</div>
+            <div>+1 to +2 μmol/m²</div>
             <div className="text-xs text-gray-500">Slight increase</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded flex-shrink-0 shadow-sm" style={{ backgroundColor: 'rgba(251, 146, 60, 0.8)' }} />
           <div className="flex-1 text-sm">
-            <div>+8 to +15 μg/m³</div>
+            <div>+2 to +5 μmol/m²</div>
             <div className="text-xs text-gray-500">Moderate increase</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded flex-shrink-0 shadow-sm" style={{ backgroundColor: 'rgba(239, 68, 68, 0.8)' }} />
           <div className="flex-1 text-sm">
-            <div>&gt; +15 μg/m³</div>
+            <div>&gt; +5 μmol/m²</div>
             <div className="text-xs text-gray-500">Strong increase</div>
           </div>
         </div>
