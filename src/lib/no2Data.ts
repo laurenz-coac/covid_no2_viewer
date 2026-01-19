@@ -6,6 +6,7 @@ export interface City {
   lat: number;
   lng: number;
   population: number;
+  baselineValue: number; // no2 from city in 2019
 }
 
 export const MAJOR_GERMAN_CITIES: City[] = [
@@ -73,8 +74,11 @@ export interface DataSourceConfig {
 
 // Default configuration - uses generated data initially
 let dataSourceConfig: DataSourceConfig = {
-  mode: 'generated',
-};
+    mode: 'geotiff',
+    geotiffBaseUrl: '/data',
+    baselineGeotiffUrl: '/data/baseline.tif'
+    // citiesDataUrl omitted - will use default MAJOR_GERMAN_CITIES
+  }
 
 /**
  * Configure data source for the application
@@ -83,12 +87,6 @@ export function configureDataSource(config: Partial<DataSourceConfig>) {
   dataSourceConfig = { ...dataSourceConfig, ...config };
 }
 
-/**
- * Get current data source configuration
- */
-export function getDataSourceConfig(): DataSourceConfig {
-  return { ...dataSourceConfig };
-}
 
 // Singleton GeoTIFF data source
 let geotiffDataSource: GeoTIFFDataSource | null = null;
@@ -113,173 +111,6 @@ export function resetGeoTIFFDataSource(): void {
   geotiffDataSource = null;
 }
 
-// Generate baseline data (2017-2019 average)
-function generateBaselineData(): Map<string, BaselineMeasurement> {
-  const baseline = new Map<string, BaselineMeasurement>();
-  
-  MAJOR_GERMAN_CITIES.forEach(city => {
-    // Base NO2 levels vary by city size and industrial activity
-    // Larger cities typically had higher pre-COVID NO2 levels
-    const baseLevel = 25 + (city.population / 100000) * 1.5 + (Math.random() - 0.5) * 5;
-    
-    // Generate ~100 measurements for statistical testing
-    const measurements: number[] = [];
-    for (let i = 0; i < 100; i++) {
-      measurements.push(baseLevel + (Math.random() - 0.5) * 8);
-    }
-    
-    const meanValue = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-    const variance = measurements.reduce((sum, val) => sum + Math.pow(val - meanValue, 2), 0) / measurements.length;
-    const stdDev = Math.sqrt(variance);
-    
-    baseline.set(city.name, {
-      cityName: city.name,
-      meanValue,
-      stdDev,
-      measurements
-    });
-  });
-  
-  return baseline;
-}
-
-// Generate grid of measurement points across Germany for continuous overlay
-function generateGridMeasurements(date: Date, baseline: Map<string, BaselineMeasurement>): GridPoint[] {
-  const gridPoints: GridPoint[] = [];
-  
-  // Germany bounding box (approximate)
-  const minLat = 47.3;
-  const maxLat = 55.1;
-  const minLng = 5.9;
-  const maxLng = 15.0;
-  
-  // Grid resolution - reduced for better transparency
-  const latStep = 0.6;
-  const lngStep = 0.8;
-  
-  // Calculate COVID impact factor based on timeline
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  let covidImpactFactor = 1.0;
-  
-  if (year === 2020) {
-    if (month >= 2 && month <= 4) {
-      covidImpactFactor = 0.55 - month * 0.05;
-    } else if (month >= 5 && month <= 8) {
-      covidImpactFactor = 0.65 + (month - 5) * 0.05;
-    } else if (month >= 9) {
-      covidImpactFactor = 0.75;
-    } else {
-      covidImpactFactor = 0.95;
-    }
-  } else if (year === 2021) {
-    if (month <= 5) {
-      covidImpactFactor = 0.70 + month * 0.02;
-    } else {
-      covidImpactFactor = 0.80 + (month - 6) * 0.02;
-    }
-  } else if (year === 2022) {
-    covidImpactFactor = 0.85 + month * 0.01;
-  } else if (year >= 2023) {
-    covidImpactFactor = 0.95 + (Math.random() - 0.5) * 0.05;
-  }
-  
-  // Create grid points
-  for (let lat = minLat; lat <= maxLat; lat += latStep) {
-    for (let lng = minLng; lng <= maxLng; lng += lngStep) {
-      // Find nearest cities to interpolate NO2 values
-      const distances = MAJOR_GERMAN_CITIES.map(city => ({
-        city,
-        distance: Math.sqrt(Math.pow(lat - city.lat, 2) + Math.pow(lng - city.lng, 2))
-      })).sort((a, b) => a.distance - b.distance);
-      
-      // Use inverse distance weighting from nearest 3 cities
-      const nearest = distances.slice(0, 3);
-      const totalWeight = nearest.reduce((sum, d) => sum + 1 / (d.distance + 0.1), 0);
-      
-      let baselineValue = 0;
-      nearest.forEach(({ city, distance }) => {
-        const cityBaseline = baseline.get(city.name);
-        if (cityBaseline) {
-          const weight = (1 / (distance + 0.1)) / totalWeight;
-          baselineValue += cityBaseline.meanValue * weight;
-        }
-      });
-      
-      // Apply COVID impact with spatial variation
-      const spatialVariation = 0.9 + Math.random() * 0.2;
-      const currentValue = baselineValue * covidImpactFactor * spatialVariation;
-      const difference = currentValue - baselineValue;
-      
-      gridPoints.push({
-        lat,
-        lng,
-        value: currentValue,
-        difference
-      });
-    }
-  }
-  
-  return gridPoints;
-}
-
-// Generate time-series data from 2020 onwards
-function generateTimeSeriesData(date: Date, baseline: Map<string, BaselineMeasurement>): NO2Measurement[] {
-  const measurements: NO2Measurement[] = [];
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  
-  // Calculate COVID impact factor based on timeline
-  let covidImpactFactor = 1.0;
-  
-  if (year === 2020) {
-    if (month >= 2 && month <= 4) {
-      // March-May 2020: First lockdown, dramatic reduction
-      covidImpactFactor = 0.55 - month * 0.05;
-    } else if (month >= 5 && month <= 8) {
-      // Summer 2020: Gradual recovery
-      covidImpactFactor = 0.65 + (month - 5) * 0.05;
-    } else if (month >= 9) {
-      // Fall 2020: Second wave, moderate reduction
-      covidImpactFactor = 0.75;
-    } else {
-      // Jan-Feb 2020: Pre-lockdown
-      covidImpactFactor = 0.95;
-    }
-  } else if (year === 2021) {
-    if (month <= 5) {
-      // Winter/Spring 2021: Continued restrictions
-      covidImpactFactor = 0.70 + month * 0.02;
-    } else {
-      // Summer/Fall 2021: Recovery
-      covidImpactFactor = 0.80 + (month - 6) * 0.02;
-    }
-  } else if (year === 2022) {
-    // 2022: Gradual return to normal
-    covidImpactFactor = 0.85 + month * 0.01;
-  } else if (year >= 2023) {
-    // 2023+: Near baseline with slight improvements
-    covidImpactFactor = 0.95 + (Math.random() - 0.5) * 0.05;
-  }
-  
-  MAJOR_GERMAN_CITIES.forEach(city => {
-    const baselineData = baseline.get(city.name);
-    if (!baselineData) return;
-    
-    // Apply COVID impact with some random variation
-    const value = baselineData.meanValue * covidImpactFactor * (0.95 + Math.random() * 0.1);
-    
-    measurements.push({
-      cityName: city.name,
-      lat: city.lat,
-      lng: city.lng,
-      value,
-      timestamp: date
-    });
-  });
-  
-  return measurements;
-}
 
 // Calculate difference from baseline
 export function getMeasurementDifference(
@@ -331,74 +162,28 @@ export function isStatisticallySignificant(
 // Singleton baseline data
 let baselineData: Map<string, BaselineMeasurement> | null = null;
 
-export function getBaselineData(): Map<string, BaselineMeasurement> {
-  if (dataSourceConfig.mode === 'geotiff') {
-    // Return a Promise wrapper that resolves to the baseline data
-    throw new Error('Use async getBaselineDataAsync() for GeoTIFF mode');
-  }
-  
-  if (!baselineData) {
-    baselineData = generateBaselineData();
-  }
-  return baselineData;
-}
 
 /**
  * Async version of getBaselineData that works with both modes
  */
 export async function getBaselineDataAsync(date: Date): Promise<Map<string, BaselineMeasurement>> {
-  if (dataSourceConfig.mode === 'geotiff') {
-    const source = getGeoTIFFDataSource();
-    return await source.getBaselineData(date);
-  }
-  
-  return getBaselineData();
-}
-
-export function getCurrentMeasurements(date: Date): NO2Measurement[] {
-  if (dataSourceConfig.mode === 'geotiff') {
-    throw new Error('Use async getCurrentMeasurementsAsync() for GeoTIFF mode');
-  }
-  
-  return generateTimeSeriesData(date, getBaselineData());
+  const source = getGeoTIFFDataSource();
+  return await source.getBaselineData(date);
 }
 
 /**
  * Async version of getCurrentMeasurements that works with both modes
  */
 export async function getCurrentMeasurementsAsync(date: Date): Promise<NO2Measurement[]> {
-  if (dataSourceConfig.mode === 'geotiff') {
-    const source = getGeoTIFFDataSource();
-    return await source.getCurrentMeasurements(date);
+  const source = getGeoTIFFDataSource();
+  return await source.getCurrentMeasurements(date);
   }
-  
-  return getCurrentMeasurements(date);
-}
-
-export function getCityData(cityName: string, date: Date) {
-  if (dataSourceConfig.mode === 'geotiff') {
-    throw new Error('Use async getCityDataAsync() for GeoTIFF mode');
-  }
-  
-  const baseline = getBaselineData().get(cityName);
-  const current = getCurrentMeasurements(date).find(m => m.cityName === cityName);
-  
-  if (!baseline || !current) return null;
-  
-  return {
-    baseline,
-    current,
-    difference: getMeasurementDifference(current, baseline),
-    percentageChange: getPercentageChange(current, baseline),
-    isSignificant: isStatisticallySignificant(current, baseline)
-  };
-}
 
 /**
  * Async version of getCityData that works with both modes
  */
 export async function getCityDataAsync(cityName: string, date: Date) {
-  const baseline = await getBaselineDataAsync();
+  const baseline = await getBaselineDataAsync(date);
   const measurements = await getCurrentMeasurementsAsync(date);
   
   const baselineData = baseline.get(cityName);
@@ -415,24 +200,12 @@ export async function getCityDataAsync(cityName: string, date: Date) {
   };
 }
 
-export function getGridData(date: Date): GridPoint[] {
-  if (dataSourceConfig.mode === 'geotiff') {
-    throw new Error('Use async getGridDataAsync() for GeoTIFF mode');
-  }
-  
-  return generateGridMeasurements(date, getBaselineData());
-}
-
 /**
  * Async version of getGridData that works with both modes
  * @param date - Date to get grid data for
  * @param samplingRate - For GeoTIFF mode, sample every Nth pixel (default 2 for performance)
  */
 export async function getGridDataAsync(date: Date, samplingRate: number = 2): Promise<GridPoint[]> {
-  if (dataSourceConfig.mode === 'geotiff') {
-    const source = getGeoTIFFDataSource();
-    return await source.getGridData(date, samplingRate);
-  }
-  
-  return getGridData(date);
+  const source = getGeoTIFFDataSource();
+  return await source.getGridData(date, samplingRate);
 }

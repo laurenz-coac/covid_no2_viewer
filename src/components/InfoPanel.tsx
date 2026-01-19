@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingDown, TrendingUp, AlertCircle, X } from 'lucide-react';
-import { 
-  getCityDataAsync,
-  getCityData
- } from '../lib/no2Data';
+import { getCityDataAsync } from '../lib/no2Data';
 
 interface InfoPanelProps {
   selectedCity: any;

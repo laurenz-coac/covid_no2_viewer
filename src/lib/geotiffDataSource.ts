@@ -106,6 +106,7 @@ export class GeoTIFFDataSource {
 
   /**
    * Get measurements for all cities at a specific date
+   * TODO: Do not sample from tiff; load pre-computed city values
    */
   async getCurrentMeasurements(date: Date): Promise<NO2Measurement[]> {
     if (!this.config.geotiffBaseUrl) {

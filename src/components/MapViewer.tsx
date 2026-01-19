@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, Minus } from "lucide-react";
 import {
-  getCurrentMeasurements,
-  getBaselineData,
   getCurrentMeasurementsAsync,
   getBaselineDataAsync,
   getMeasurementDifference,
@@ -50,9 +48,6 @@ export function MapViewer({
 
   // Update measurements and grid when date changes
   useEffect(() => {
-    // const currentMeasurements =
-    //   getCurrentMeasurements(currentDate);
-    // const baseline = getBaselineData();
 
     async function fetchData() {
     const currentMeasurements =
