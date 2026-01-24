@@ -68,7 +68,6 @@ export interface DataSourceConfig {
 let dataSourceConfig: DataSourceConfig = {
     mode: 'geotiff',
     geotiffBaseUrl: '/data',
-    baselineGeotiffUrl: '/data/baseline.tif',
     citiesDataUrl: '/city_data'
   }
 
