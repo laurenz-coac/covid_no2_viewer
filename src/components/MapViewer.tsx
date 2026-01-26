@@ -93,7 +93,7 @@ export function MapViewer({
 
     // Get grid data for continuous overlay
     // const grid = getGridData(currentDate);
-    const grid = await getGridDataAsync(currentDate, 5);
+    const grid = await getGridDataAsync(currentDate, 3);
     setGridData(grid);
   }
     fetchData();
@@ -242,14 +242,14 @@ export function MapViewer({
     const delta = e.deltaY > 0 ? -0.5 : 0.5;
     setViewState((prev) => ({
       ...prev,
-      zoom: Math.max(6, Math.min(8, prev.zoom + delta)),
+      zoom: Math.max(6, Math.min(10, prev.zoom + delta)),
     }));
   };
 
   const handleZoomIn = () => {
     setViewState((prev) => ({
       ...prev,
-      zoom: Math.min(8, prev.zoom + 1),
+      zoom: Math.min(10, prev.zoom + 1),
     }));
   };
 
@@ -338,7 +338,6 @@ export function MapViewer({
   // NO2 difference in mol/m²
   // Typical NO2 column densities: ~1e-5 to 1e-4 mol/m²
   // Meaningful changes: ~1e-6 mol/m² or larger
-  
   // Green for decrease (good), red for increase (bad)
   if (diff < -5e-6) return "rgba(34, 197, 94, 0.3)";   // Strong decrease - dark green
   if (diff < -2e-6) return "rgba(134, 239, 172, 0.3)"; // Moderate decrease - light green
@@ -439,7 +438,6 @@ useEffect(() => {
 
         // Optional: Apply slight blur for extra smoothness
         ctx.save();
-        ctx.filter = 'blur(1px)';
         ctx.globalAlpha = 1;
         ctx.drawImage(canvas, 0, 0);
         ctx.restore();
@@ -448,7 +446,7 @@ useEffect(() => {
     }
   }
 
-  // ===== CITY MARKERS (unchanged) =====
+  // ===== CITY MARKERS =====
   measurements.forEach((measurement: any) => {
     const pos = latLngToScreen(measurement.city.lat, measurement.city.lng);
     
@@ -530,7 +528,7 @@ useEffect(() => {
         <button
           className="bg-white hover:bg-gray-100 p-2 rounded-lg shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleZoomIn}
-          disabled={viewState.zoom >= 8}
+          disabled={viewState.zoom >= 10}
           aria-label="Zoom in"
         >
           <Plus className="w-5 h-5" />
